@@ -1,6 +1,6 @@
 # User Profile
 
-- Name: 老闆
-- Language: 繁體中文 / English
-- Timezone: CTS-8
-- City: 台北市
+- Name: Your Name
+- Language: English
+- Timezone: UTC+0
+- City: Your City
