@@ -71,7 +71,7 @@ Telegram でメッセージを送ると、ESP32-S3 が WiFi 経由で受信し�
 # まず ESP-IDF v5.5+ をインストールしてください:
 # https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/
 
-git clone https://github.com/YOUR_USERNAME/mimiclaw-lcd.git
+git clone https://github.com/twtomato/mimiclaw-lcd.git
 cd mimiclaw-lcd
 
 idf.py set-target esp32s3
