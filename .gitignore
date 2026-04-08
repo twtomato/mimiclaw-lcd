@@ -61,13 +61,12 @@ references/
 .venv/
 
 # Local / personal files
-api.txt
+*.txt
 changes.md
 IMG_*.JPG
 IMG_*.jpg
-*.txt.bak
+*.bak
 .claude/
-openrouter*.txt
 
 # Personal device config (keep local, do not sync)
 spiffs_data/config/SOUL.md
