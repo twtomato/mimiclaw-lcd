@@ -5,7 +5,7 @@
 
 /**
  * Add a scheduled cron job.
- * Input JSON: { name, schedule_type ("every"/"at"), interval_s, at_epoch, message, channel?, chat_id? }
+ * Input JSON: { name, schedule_type ("every"/"at"/"daily_at"), interval_s, at_epoch, hour, minute, message, channel?, chat_id? }
  */
 esp_err_t tool_cron_add_execute(const char *input_json, char *output, size_t output_size);
 

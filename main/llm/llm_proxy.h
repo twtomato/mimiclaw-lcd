@@ -13,6 +13,16 @@
 esp_err_t llm_proxy_init(void);
 
 /**
+ * Get the current provider string (e.g. "openai", "anthropic", "openrouter").
+ */
+const char *llm_get_provider(void);
+
+/**
+ * Get the current model string (e.g. "gpt-4o", "claude-opus-4-5").
+ */
+const char *llm_get_model(void);
+
+/**
  * Save the LLM API key to NVS.
  */
 esp_err_t llm_set_api_key(const char *api_key);

@@ -17,6 +17,7 @@ static const char *TAG = "telegram";
 
 static char s_bot_token[128] = MIMI_SECRET_TG_TOKEN;
 static int64_t s_update_offset = 0;
+static esp_err_t s_last_poll_err = ESP_OK;
 static int64_t s_last_saved_offset = -1;
 static int64_t s_last_offset_save_us = 0;
 
@@ -234,7 +235,13 @@ static char *tg_api_call_direct(const char *method, const char *post_data)
     esp_http_client_cleanup(client);
 
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
+        if (err == ESP_ERR_HTTP_EAGAIN) {
+            /* Normal long-poll timeout — no new messages, retry silently */
+            ESP_LOGD(TAG, "Long-poll timeout (no new messages)");
+        } else {
+            ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
+        }
+        s_last_poll_err = err;
         free(resp.buf);
         return NULL;
     }
@@ -388,12 +395,13 @@ static void telegram_poll_task(void *arg)
                  "getUpdates?offset=%" PRId64 "&timeout=%d",
                  s_update_offset, MIMI_TG_POLL_TIMEOUT_S);
 
+        s_last_poll_err = ESP_OK;
         char *resp = tg_api_call(params, NULL);
         if (resp) {
             process_updates(resp);
             free(resp);
-        } else {
-            /* Back off on error */
+        } else if (s_last_poll_err != ESP_ERR_HTTP_EAGAIN) {
+            /* Back off on real errors, not on normal long-poll timeout */
             vTaskDelay(pdMS_TO_TICKS(3000));
         }
     }
@@ -554,10 +562,13 @@ esp_err_t telegram_set_token(const char *token)
     nvs_handle_t nvs;
     ESP_ERROR_CHECK(nvs_open(MIMI_NVS_TG, NVS_READWRITE, &nvs));
     ESP_ERROR_CHECK(nvs_set_str(nvs, MIMI_NVS_KEY_TG_TOKEN, token));
+    nvs_erase_key(nvs, TG_OFFSET_NVS_KEY);  /* reset offset for new bot */
     ESP_ERROR_CHECK(nvs_commit(nvs));
     nvs_close(nvs);
 
     strncpy(s_bot_token, token, sizeof(s_bot_token) - 1);
-    ESP_LOGI(TAG, "Telegram bot token saved");
+    s_update_offset = 0;
+    s_last_saved_offset = -1;
+    ESP_LOGI(TAG, "Telegram bot token saved, update offset reset");
     return ESP_OK;
 }

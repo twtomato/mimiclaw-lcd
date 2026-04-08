@@ -5,6 +5,7 @@
 #include "tools/tool_files.h"
 #include "tools/tool_cron.h"
 #include "tools/tool_gpio.h"
+#include "tools/tool_config.h"
 
 #include <string.h>
 #include "esp_log.h"
@@ -141,9 +142,11 @@ esp_err_t tool_registry_init(void)
             "{\"type\":\"object\","
             "\"properties\":{"
             "\"name\":{\"type\":\"string\",\"description\":\"Short name for the job\"},"
-            "\"schedule_type\":{\"type\":\"string\",\"description\":\"'every' for recurring interval or 'at' for one-shot at a unix timestamp\"},"
+            "\"schedule_type\":{\"type\":\"string\",\"description\":\"'every' for recurring interval; 'at' for one-shot at a unix timestamp; 'daily_at' for every day at a fixed local time (e.g. every day at 09:00)\"},"
             "\"interval_s\":{\"type\":\"integer\",\"description\":\"Interval in seconds (required for 'every')\"},"
             "\"at_epoch\":{\"type\":\"integer\",\"description\":\"Unix timestamp to fire at (required for 'at')\"},"
+            "\"hour\":{\"type\":\"integer\",\"description\":\"Hour in local time 0-23 (required for 'daily_at')\"},"
+            "\"minute\":{\"type\":\"integer\",\"description\":\"Minute 0-59 (required for 'daily_at')\"},"
             "\"message\":{\"type\":\"string\",\"description\":\"Message to inject when the job fires, triggering an agent turn\"},"
             "\"channel\":{\"type\":\"string\",\"description\":\"Optional reply channel (e.g. 'telegram'). If omitted, current turn channel is used when available\"},"
             "\"chat_id\":{\"type\":\"string\",\"description\":\"Optional reply chat_id. Required when channel='telegram'. If omitted during a Telegram turn, current chat_id is used\"}"
@@ -176,6 +179,23 @@ esp_err_t tool_registry_init(void)
         .execute = tool_cron_remove_execute,
     };
     register_tool(&cr);
+
+    /* Register set_config */
+    mimi_tool_t sc = {
+        .name = "set_config",
+        .description = "Save a runtime configuration value to NVS. Changes take effect immediately. "
+                       "Supported keys: 'model' (LLM model name), 'provider' (e.g. openrouter/anthropic/openai), "
+                       "'api_key' (LLM API key), 'tavily_key' (Tavily search key), 'search_key' (Brave search key).",
+        .input_schema_json =
+            "{\"type\":\"object\","
+            "\"properties\":{"
+            "\"key\":{\"type\":\"string\",\"description\":\"Config key: model, provider, api_key, tavily_key, search_key\"},"
+            "\"value\":{\"type\":\"string\",\"description\":\"The value to set\"}"
+            "},"
+            "\"required\":[\"key\",\"value\"]}",
+        .execute = tool_config_set_execute,
+    };
+    register_tool(&sc);
 
     /* Register GPIO tools */
     tool_gpio_init();

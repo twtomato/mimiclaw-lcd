@@ -16,3 +16,6 @@ User: "What's the weather in Tokyo?"
 → get_current_time
 → web_search "weather Tokyo today February 2026"
 → "Tokyo: 8°C, partly cloudy. High 12°C, low 4°C. Light wind from the north."
+
+## Note
+If the user asks to "send" weather info to themselves or someone, just include the result in your reply — your response is automatically delivered to the user. No send_message tool is needed.

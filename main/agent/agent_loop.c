@@ -5,6 +5,8 @@
 #include "llm/llm_proxy.h"
 #include "memory/session_mgr.h"
 #include "tools/tool_registry.h"
+#include "cli/direct_cmd.h"
+#include "display/display_service.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -12,11 +14,16 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_system.h"
 #include "cJSON.h"
 
 static const char *TAG = "agent";
 
+#ifdef CONFIG_SPIRAM
 #define TOOL_OUTPUT_SIZE  (8 * 1024)
+#else
+#define TOOL_OUTPUT_SIZE  (4 * 1024)
+#endif
 
 /* Build the assistant content array from llm_response_t for the messages history.
  * Returns a cJSON array with text and tool_use blocks. */
@@ -172,13 +179,13 @@ static void agent_loop_task(void *arg)
 {
     ESP_LOGI(TAG, "Agent loop started on core %d", xPortGetCoreID());
 
-    /* Allocate large buffers from PSRAM */
-    char *system_prompt = heap_caps_calloc(1, MIMI_CONTEXT_BUF_SIZE, MALLOC_CAP_SPIRAM);
-    char *history_json = heap_caps_calloc(1, MIMI_LLM_STREAM_BUF_SIZE, MALLOC_CAP_SPIRAM);
-    char *tool_output = heap_caps_calloc(1, TOOL_OUTPUT_SIZE, MALLOC_CAP_SPIRAM);
+    /* Allocate large buffers (PSRAM if available, internal RAM otherwise) */
+    char *system_prompt = heap_caps_calloc(1, MIMI_CONTEXT_BUF_SIZE, MIMI_MALLOC_LARGE);
+    char *history_json = heap_caps_calloc(1, MIMI_LLM_STREAM_BUF_SIZE, MIMI_MALLOC_LARGE);
+    char *tool_output = heap_caps_calloc(1, TOOL_OUTPUT_SIZE, MIMI_MALLOC_LARGE);
 
     if (!system_prompt || !history_json || !tool_output) {
-        ESP_LOGE(TAG, "Failed to allocate PSRAM buffers");
+        ESP_LOGE(TAG, "Failed to allocate agent buffers");
         vTaskDelete(NULL);
         return;
     }
@@ -191,6 +198,35 @@ static void agent_loop_task(void *arg)
         if (err != ESP_OK) continue;
 
         ESP_LOGI(TAG, "Processing message from %s:%s", msg.channel, msg.chat_id);
+
+        /* Direct command — bypass LLM entirely */
+        if (direct_cmd_is(msg.content)) {
+            bool is_restart = (strncmp(msg.content, "/restart", 8) == 0);
+
+            char *dcmd_out = heap_caps_calloc(1, 1024, MALLOC_CAP_DEFAULT);
+            if (dcmd_out) {
+                direct_cmd_execute(msg.content, dcmd_out, 1024);
+                mimi_msg_t out = {0};
+                strncpy(out.channel, msg.channel, sizeof(out.channel) - 1);
+                strncpy(out.chat_id, msg.chat_id, sizeof(out.chat_id) - 1);
+                out.content = dcmd_out;
+                if (message_bus_push_outbound(&out) != ESP_OK) {
+                    free(dcmd_out);
+                }
+            }
+
+            free(msg.content);
+
+            if (is_restart) {
+                vTaskDelay(pdMS_TO_TICKS(1500));  /* wait for message to be sent */
+                esp_restart();
+            }
+            continue;
+        }
+
+        /* Show user message bubble + thinking animation */
+        display_service_push_chat("user", msg.content);
+        display_service_show_thinking(msg.channel);
 
         /* 1. Build system prompt */
         context_build_system_prompt(system_prompt, MIMI_CONTEXT_BUF_SIZE);
@@ -270,10 +306,38 @@ static void agent_loop_task(void *arg)
             iteration++;
         }
 
+        /* If iteration limit was hit without a text answer, force one final synthesis call */
+        if (!final_text && iteration >= MIMI_AGENT_MAX_TOOL_ITER) {
+            ESP_LOGW(TAG, "Tool iteration limit reached, forcing final synthesis");
+            llm_response_t synth;
+            if (llm_chat_tools(system_prompt, messages, NULL, &synth) == ESP_OK) {
+                if (synth.text && synth.text_len > 0) {
+                    final_text = strdup(synth.text);
+                }
+                llm_response_free(&synth);
+            }
+        }
+
+        /* Retry once if LLM returned empty response (free model quirk) */
+        if (!final_text && iteration > 0 && err == ESP_OK) {
+            ESP_LOGW(TAG, "Empty LLM response, retrying once...");
+            llm_response_t retry;
+            if (llm_chat_tools(system_prompt, messages, NULL, &retry) == ESP_OK) {
+                if (retry.text && retry.text_len > 0) {
+                    final_text = strdup(retry.text);
+                }
+                llm_response_free(&retry);
+            }
+        }
+
         cJSON_Delete(messages);
 
         /* 5. Send response */
         if (final_text && final_text[0]) {
+            /* Show assistant bubble and stop thinking animation */
+            display_service_push_chat("assistant", final_text);
+            display_service_show_message(msg.channel, NULL);
+
             /* Save to session (only user text + final assistant text) */
             esp_err_t save_user = session_append(msg.chat_id, "user", msg.content);
             esp_err_t save_asst = session_append(msg.chat_id, "assistant", final_text);
@@ -318,8 +382,13 @@ static void agent_loop_task(void *arg)
         free(msg.content);
 
         /* Log memory status */
+        ESP_LOGI(TAG, "Free heap: %d bytes (internal: %d)",
+                 (int)esp_get_free_heap_size(),
+                 (int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+#ifdef CONFIG_SPIRAM
         ESP_LOGI(TAG, "Free PSRAM: %d bytes",
                  (int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+#endif
     }
 }
 

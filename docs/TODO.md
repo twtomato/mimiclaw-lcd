@@ -84,10 +84,10 @@
 
 ## P2 — Advanced Features
 
-### [ ] Cron Scheduled Task Service
-- **nanobot**: `cron/service.py` — full cron scheduler supporting at/every/cron expressions, persistent storage, timed agent triggers
-- **MimiClaw**: Not implemented
-- **Recommendation**: Use FreeRTOS timer for simplified version, support "every N minutes" only
+### [x] ~~Cron Scheduled Task Service~~
+- Implemented: `cron/cron_service.c` — FreeRTOS timer-based scheduler, supports `at` (one-shot) and `every` (recurring), persistent storage to `/spiffs/cron.json`, fires via message bus
+- **Bug fix**: `get_current_time` now appends `, epoch=<unix>` to output so LLM can compute future timestamps via simple arithmetic instead of error-prone calendar math
+- **Bug fix**: `cron_list` now includes human-readable local time alongside epoch (e.g. `2026-03-21 10:00 CST (epoch=1774058400)`) so LLM can verify and report times correctly
 
 ### [ ] Heartbeat Service
 - **nanobot**: `heartbeat/service.py` — reads HEARTBEAT.md every 30 minutes, triggers agent if tasks are found
@@ -150,6 +150,7 @@
 - [x] WiFi Manager (build-time credentials, exponential backoff)
 - [x] SPIFFS storage
 - [x] Build-time config (`mimi_secrets.h`) + runtime NVS override via CLI
+- [x] Cron Service (`cron/cron_service.c`) — at/every jobs, SPIFFS persistence, message bus dispatch
 
 ---
 

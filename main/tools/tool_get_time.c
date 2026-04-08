@@ -53,10 +53,12 @@ static bool parse_and_set_time(const char *date_str, char *out, size_t out_size)
     struct timeval tv = { .tv_sec = t };
     settimeofday(&tv, NULL);
 
-    /* Format in local time */
+    /* Format in local time, append epoch so LLM can compute future timestamps */
     struct tm local;
     localtime_r(&t, &local);
     strftime(out, out_size, "%Y-%m-%d %H:%M:%S %Z (%A)", &local);
+    size_t len = strlen(out);
+    snprintf(out + len, out_size - len, ", epoch=%lld", (long long)t);
 
     return true;
 }

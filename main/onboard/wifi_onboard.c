@@ -395,12 +395,18 @@ static esp_err_t start_softap(bool keep_sta)
     wifi_config_t ap_cfg = {
         .ap = {
             .max_connection = 4,
-            .authmode = WIFI_AUTH_OPEN,
             .channel = 1,
         },
     };
     strncpy((char *)ap_cfg.ap.ssid, ssid, sizeof(ap_cfg.ap.ssid) - 1);
     ap_cfg.ap.ssid_len = strlen(ssid);
+
+    if (strlen(MIMI_ONBOARD_AP_PASS) > 0) {
+        strncpy((char *)ap_cfg.ap.password, MIMI_ONBOARD_AP_PASS, sizeof(ap_cfg.ap.password) - 1);
+        ap_cfg.ap.authmode = WIFI_AUTH_WPA2_PSK;
+    } else {
+        ap_cfg.ap.authmode = WIFI_AUTH_OPEN;
+    }
 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
     esp_err_t err = esp_wifi_start();
@@ -408,7 +414,8 @@ static esp_err_t start_softap(bool keep_sta)
         return err;
     }
 
-    ESP_LOGI(TAG, "Soft AP started: %s (open)", ssid);
+    ESP_LOGI(TAG, "Soft AP started: %s (%s)", ssid,
+             ap_cfg.ap.authmode == WIFI_AUTH_OPEN ? "open" : "WPA2");
     return ESP_OK;
 }
 

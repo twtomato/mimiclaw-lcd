@@ -9,6 +9,8 @@
 
 static const char *TAG = "tool_cron";
 
+static void fmt_local_time(time_t t, char *buf, size_t bufsz);
+
 /* ── cron_add ─────────────────────────────────────────────────── */
 
 esp_err_t tool_cron_add_execute(const char *input_json, char *output, size_t output_size)
@@ -86,8 +88,27 @@ esp_err_t tool_cron_add_execute(const char *input_json, char *output, size_t out
         /* Default: delete one-shot jobs after run */
         cJSON *delete_j = cJSON_GetObjectItem(root, "delete_after_run");
         job.delete_after_run = delete_j ? cJSON_IsTrue(delete_j) : true;
+    } else if (strcmp(schedule_type, "daily_at") == 0) {
+        job.kind = CRON_KIND_DAILY_AT;
+        cJSON *hour   = cJSON_GetObjectItem(root, "hour");
+        cJSON *minute = cJSON_GetObjectItem(root, "minute");
+        if (!hour || !cJSON_IsNumber(hour) || !minute || !cJSON_IsNumber(minute)) {
+            snprintf(output, output_size, "Error: 'daily_at' schedule requires 'hour' (0-23) and 'minute' (0-59)");
+            cJSON_Delete(root);
+            return ESP_ERR_INVALID_ARG;
+        }
+        int h = (int)hour->valuedouble;
+        int m = (int)minute->valuedouble;
+        if (h < 0 || h > 23 || m < 0 || m > 59) {
+            snprintf(output, output_size, "Error: 'hour' must be 0-23 and 'minute' must be 0-59");
+            cJSON_Delete(root);
+            return ESP_ERR_INVALID_ARG;
+        }
+        job.hour   = (uint8_t)h;
+        job.minute = (uint8_t)m;
+        job.delete_after_run = false;
     } else {
-        snprintf(output, output_size, "Error: schedule_type must be 'every' or 'at'");
+        snprintf(output, output_size, "Error: schedule_type must be 'every', 'at', or 'daily_at'");
         cJSON_Delete(root);
         return ESP_ERR_INVALID_ARG;
     }
@@ -101,14 +122,24 @@ esp_err_t tool_cron_add_execute(const char *input_json, char *output, size_t out
     }
 
     /* Format success response */
+    char next_time_buf[32];
+    fmt_local_time((time_t)job.next_run, next_time_buf, sizeof(next_time_buf));
+
     if (job.kind == CRON_KIND_EVERY) {
         snprintf(output, output_size,
-                 "OK: Added recurring job '%s' (id=%s), runs every %lu seconds. Next run at epoch %lld.",
-                 job.name, job.id, (unsigned long)job.interval_s, (long long)job.next_run);
+                 "OK: Added recurring job '%s' (id=%s), runs every %lu seconds. Next run: %s (epoch=%lld).",
+                 job.name, job.id, (unsigned long)job.interval_s,
+                 next_time_buf, (long long)job.next_run);
+    } else if (job.kind == CRON_KIND_DAILY_AT) {
+        snprintf(output, output_size,
+                 "OK: Added daily job '%s' (id=%s), fires every day at %02d:%02d local time. Next run: %s (epoch=%lld).",
+                 job.name, job.id, job.hour, job.minute,
+                 next_time_buf, (long long)job.next_run);
     } else {
         snprintf(output, output_size,
-                 "OK: Added one-shot job '%s' (id=%s), fires at epoch %lld.%s",
-                 job.name, job.id, (long long)job.at_epoch,
+                 "OK: Added one-shot job '%s' (id=%s), fires at %s (epoch=%lld).%s",
+                 job.name, job.id,
+                 next_time_buf, (long long)job.at_epoch,
                  job.delete_after_run ? " Will be deleted after firing." : "");
     }
 
@@ -117,6 +148,13 @@ esp_err_t tool_cron_add_execute(const char *input_json, char *output, size_t out
 }
 
 /* ── cron_list ────────────────────────────────────────────────── */
+
+static void fmt_local_time(time_t t, char *buf, size_t bufsz)
+{
+    struct tm local;
+    localtime_r(&t, &local);
+    strftime(buf, bufsz, "%Y-%m-%d %H:%M %Z", &local);
+}
 
 esp_err_t tool_cron_list_execute(const char *input_json, char *output, size_t output_size)
 {
@@ -137,22 +175,33 @@ esp_err_t tool_cron_list_execute(const char *input_json, char *output, size_t ou
 
     for (int i = 0; i < count && off < output_size - 1; i++) {
         const cron_job_t *j = &jobs[i];
+        char time_buf[32];
 
         if (j->kind == CRON_KIND_EVERY) {
+            fmt_local_time((time_t)j->next_run, time_buf, sizeof(time_buf));
             off += snprintf(output + off, output_size - off,
-                "  %d. [%s] \"%s\" — every %lus, %s, next=%lld, last=%lld, ch=%s:%s\n",
+                "  %d. [%s] \"%s\" — every %lus, %s, next=%s (epoch=%lld), ch=%s:%s\n",
                 i + 1, j->id, j->name,
                 (unsigned long)j->interval_s,
                 j->enabled ? "enabled" : "disabled",
-                (long long)j->next_run, (long long)j->last_run,
+                time_buf, (long long)j->next_run,
+                j->channel, j->chat_id);
+        } else if (j->kind == CRON_KIND_DAILY_AT) {
+            fmt_local_time((time_t)j->next_run, time_buf, sizeof(time_buf));
+            off += snprintf(output + off, output_size - off,
+                "  %d. [%s] \"%s\" — daily at %02d:%02d, %s, next=%s (epoch=%lld), ch=%s:%s\n",
+                i + 1, j->id, j->name,
+                j->hour, j->minute,
+                j->enabled ? "enabled" : "disabled",
+                time_buf, (long long)j->next_run,
                 j->channel, j->chat_id);
         } else {
+            fmt_local_time((time_t)j->at_epoch, time_buf, sizeof(time_buf));
             off += snprintf(output + off, output_size - off,
-                "  %d. [%s] \"%s\" — at %lld, %s, last=%lld, ch=%s:%s%s\n",
+                "  %d. [%s] \"%s\" — at %s (epoch=%lld), %s, ch=%s:%s%s\n",
                 i + 1, j->id, j->name,
-                (long long)j->at_epoch,
+                time_buf, (long long)j->at_epoch,
                 j->enabled ? "enabled" : "disabled",
-                (long long)j->last_run,
                 j->channel, j->chat_id,
                 j->delete_after_run ? " (auto-delete)" : "");
         }

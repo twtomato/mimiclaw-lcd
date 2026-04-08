@@ -151,6 +151,12 @@ static esp_err_t cron_load_jobs(void)
             cJSON *at_epoch = cJSON_GetObjectItem(item, "at_epoch");
             job->at_epoch = (at_epoch && cJSON_IsNumber(at_epoch))
                             ? (int64_t)at_epoch->valuedouble : 0;
+        } else if (strcmp(kind_str, "daily_at") == 0) {
+            job->kind = CRON_KIND_DAILY_AT;
+            cJSON *hour   = cJSON_GetObjectItem(item, "hour");
+            cJSON *minute = cJSON_GetObjectItem(item, "minute");
+            job->hour   = (hour   && cJSON_IsNumber(hour))   ? (uint8_t)hour->valuedouble   : 0;
+            job->minute = (minute && cJSON_IsNumber(minute)) ? (uint8_t)minute->valuedouble : 0;
         } else {
             continue; /* Unknown kind, skip */
         }
@@ -186,11 +192,16 @@ static esp_err_t cron_save_jobs(void)
         cJSON_AddStringToObject(item, "id", job->id);
         cJSON_AddStringToObject(item, "name", job->name);
         cJSON_AddBoolToObject(item, "enabled", job->enabled);
-        cJSON_AddStringToObject(item, "kind",
-            job->kind == CRON_KIND_EVERY ? "every" : "at");
+        const char *kind_str_save =
+            job->kind == CRON_KIND_EVERY    ? "every"    :
+            job->kind == CRON_KIND_DAILY_AT ? "daily_at" : "at";
+        cJSON_AddStringToObject(item, "kind", kind_str_save);
 
         if (job->kind == CRON_KIND_EVERY) {
             cJSON_AddNumberToObject(item, "interval_s", job->interval_s);
+        } else if (job->kind == CRON_KIND_DAILY_AT) {
+            cJSON_AddNumberToObject(item, "hour",   job->hour);
+            cJSON_AddNumberToObject(item, "minute", job->minute);
         } else {
             cJSON_AddNumberToObject(item, "at_epoch", (double)job->at_epoch);
         }
@@ -238,6 +249,25 @@ static esp_err_t cron_save_jobs(void)
 
 /* ── Due-job processing ───────────────────────────────────────── */
 
+static time_t next_daily_at(uint8_t hour, uint8_t minute)
+{
+    time_t now = time(NULL);
+    struct tm t;
+    localtime_r(&now, &t);
+
+    t.tm_hour = hour;
+    t.tm_min  = minute;
+    t.tm_sec  = 0;
+
+    time_t candidate = mktime(&t);
+    if (candidate <= now) {
+        /* Already passed today — schedule for tomorrow */
+        t.tm_mday += 1;
+        candidate = mktime(&t);
+    }
+    return candidate;
+}
+
 static void cron_process_due_jobs(void)
 {
     time_t now = time(NULL);
@@ -249,6 +279,19 @@ static void cron_process_due_jobs(void)
         if (!job->enabled) continue;
         if (job->next_run <= 0) continue;
         if (job->next_run > now) continue;
+
+        /* Skip stale next_run values created before NTP sync.
+         * If the real time is post-2020 but next_run is within the first
+         * day of epoch (< 86400), the timestamp was computed with clock=0.
+         * Reschedule instead of firing. */
+        if (job->kind == CRON_KIND_DAILY_AT &&
+            now > 1577836800LL &&
+            job->next_run < 86400LL) {
+            ESP_LOGW(TAG, "Stale next_run for '%s' (pre-NTP), rescheduling", job->name);
+            job->next_run = next_daily_at(job->hour, job->minute);
+            changed = true;
+            continue;
+        }
 
         /* Job is due — fire it */
         ESP_LOGI(TAG, "Cron job firing: %s (%s)", job->name, job->id);
@@ -285,8 +328,11 @@ static void cron_process_due_jobs(void)
                 job->enabled = false;
                 job->next_run = 0;
             }
+        } else if (job->kind == CRON_KIND_DAILY_AT) {
+            /* Always schedule for tomorrow same time */
+            job->next_run = next_daily_at(job->hour, job->minute);
         } else {
-            /* Recurring: compute next run */
+            /* EVERY: compute next run from now */
             job->next_run = now + job->interval_s;
         }
 
@@ -324,6 +370,8 @@ static void compute_initial_next_run(cron_job_t *job)
             job->next_run = 0;
             job->enabled = false;
         }
+    } else if (job->kind == CRON_KIND_DAILY_AT) {
+        job->next_run = next_daily_at(job->hour, job->minute);
     }
 }
 
@@ -350,6 +398,8 @@ esp_err_t cron_service_start(void)
                 job->next_run = now + job->interval_s;
             } else if (job->kind == CRON_KIND_AT && job->at_epoch > now) {
                 job->next_run = job->at_epoch;
+            } else if (job->kind == CRON_KIND_DAILY_AT) {
+                job->next_run = next_daily_at(job->hour, job->minute);
             }
         }
     }

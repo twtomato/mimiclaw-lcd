@@ -6,8 +6,9 @@
 
 /* Schedule types */
 typedef enum {
-    CRON_KIND_EVERY = 0,   /* Recurring interval in seconds */
-    CRON_KIND_AT    = 1,   /* One-shot at unix timestamp */
+    CRON_KIND_EVERY    = 0,   /* Recurring interval in seconds */
+    CRON_KIND_AT       = 1,   /* One-shot at unix timestamp */
+    CRON_KIND_DAILY_AT = 2,   /* Recurring every day at HH:MM local time */
 } cron_kind_t;
 
 /* A single cron job */
@@ -18,6 +19,8 @@ typedef struct {
     cron_kind_t kind;
     uint32_t interval_s;   /* For EVERY: interval in seconds */
     int64_t at_epoch;      /* For AT: unix timestamp */
+    uint8_t hour;          /* For DAILY_AT: hour (0-23, local time) */
+    uint8_t minute;        /* For DAILY_AT: minute (0-59, local time) */
     char message[256];     /* Message to inject into inbound queue */
     char channel[16];      /* Reply channel (default "system") */
     char chat_id[96];      /* Reply chat_id/open_id (default "cron") */

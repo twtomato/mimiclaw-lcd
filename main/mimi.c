@@ -26,6 +26,7 @@
 #include "heartbeat/heartbeat.h"
 #include "skills/skill_loader.h"
 #include "onboard/wifi_onboard.h"
+#include "display/display_service.h"
 
 static const char *TAG = "mimi";
 
@@ -108,14 +109,16 @@ void app_main(void)
     esp_log_level_set("esp-x509-crt-bundle", ESP_LOG_WARN);
 
     ESP_LOGI(TAG, "========================================");
-    ESP_LOGI(TAG, "  MimiClaw - ESP32-S3 AI Agent");
+    ESP_LOGI(TAG, "  MimiClaw - ESP32 AI Agent");
     ESP_LOGI(TAG, "========================================");
 
     /* Print memory info */
     ESP_LOGI(TAG, "Internal free: %d bytes",
              (int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+#ifdef CONFIG_SPIRAM
     ESP_LOGI(TAG, "PSRAM free:    %d bytes",
              (int)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+#endif
 
     /* Phase 1: Core infrastructure */
     ESP_ERROR_CHECK(init_nvs());
@@ -140,31 +143,34 @@ void app_main(void)
     /* Start Serial CLI first (works without WiFi) */
     ESP_ERROR_CHECK(serial_cli_init());
 
+    /* Display: non-fatal — continues even if no OLED is connected */
+    display_service_init();
+
     /* Start WiFi */
     esp_err_t wifi_err = wifi_manager_start();
     bool wifi_ok = false;
     if (wifi_err == ESP_OK) {
+        display_service_show_wifi_connecting(MIMI_SECRET_WIFI_SSID);
         ESP_LOGI(TAG, "Scanning nearby APs on boot...");
         wifi_manager_scan_and_print();
         ESP_LOGI(TAG, "Waiting for WiFi connection...");
         if (wifi_manager_wait_connected(30000) == ESP_OK) {
             wifi_ok = true;
             ESP_LOGI(TAG, "WiFi connected: %s", wifi_manager_get_ip());
+            display_service_show_wifi_ok(wifi_manager_get_ip());
         } else {
             ESP_LOGW(TAG, "WiFi connection timeout");
+            display_service_show_wifi_fail();
         }
     } else {
         ESP_LOGW(TAG, "No WiFi credentials configured");
+        display_service_show_wifi_fail();
     }
 
     if (!wifi_ok) {
         ESP_LOGW(TAG, "Entering WiFi onboarding mode...");
         wifi_onboard_start(WIFI_ONBOARD_MODE_CAPTIVE);  /* blocks, restarts on success */
         return;  /* unreachable */
-    }
-
-    if (wifi_onboard_start(WIFI_ONBOARD_MODE_ADMIN) != ESP_OK) {
-        ESP_LOGW(TAG, "Local admin portal unavailable; continuing without config hotspot");
     }
 
     {
@@ -184,6 +190,9 @@ void app_main(void)
         ESP_ERROR_CHECK(ws_server_start());
 
         ESP_LOGI(TAG, "All services started!");
+        display_service_show_ready(wifi_manager_get_ip(),
+                                   llm_get_provider(),
+                                   llm_get_model());
     }
 
     ESP_LOGI(TAG, "MimiClaw ready. Type 'help' for CLI commands.");

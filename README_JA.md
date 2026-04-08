@@ -1,55 +1,78 @@
-# MimiClaw: $5チップで動くポケットAIアシスタント
+# MimiClaw-LCD
 
 <p align="center">
-  <img src="assets/banner.png" alt="MimiClaw" width="500" />
+  <img src="assets/banner.png" alt="MimiClaw-LCD" width="500" />
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-  <a href="https://deepwiki.com/memovai/mimiclaw"><img src="https://img.shields.io/badge/DeepWiki-mimiclaw-blue.svg" alt="DeepWiki"></a>
-  <a href="https://discord.gg/r8ZxSvB8Yr"><img src="https://img.shields.io/badge/Discord-mimiclaw-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://x.com/ssslvky"><img src="https://img.shields.io/badge/X-@ssslvky-black?logo=x" alt="X"></a>
 </p>
 
 <p align="center">
-  <strong><a href="README.md">English</a> | <a href="README_CN.md">中文</a> | <a href="README_JA.md">日本語</a></strong>
+  <strong><a href="README.md">English</a> | <a href="README_CN.md">中文</a> | <a href="README_TW.md">繁中</a> | <a href="README_JA.md">日本語</a></strong>
 </p>
 
-**$5チップ上の世界初のAIアシスタント（OpenClaw）。Linuxなし、Node.jsなし、純粋なCのみ。**
+> **[MimiClaw](https://github.com/memovai/mimiclaw)（作者：[memovai](https://github.com/memovai)）のフォークです。**
+> このフォークでは TFT LCD ディスプレイサポート、CJK フォントレンダリング、および安定性の改善が追加されています。
+> コア AI エージェントアーキテクチャはすべてオリジナルの MimiClaw プロジェクトに由来します。
 
-MimiClawは小さなESP32-S3ボードをパーソナルAIアシスタントに変えます。USB電源に接続し、WiFiにつなげて、Telegramから話しかけるだけ — どんなタスクも処理し、ローカルメモリで時間とともに成長します — すべて親指サイズのチップ上で。
+---
 
-## MimiClawの特徴
+MimiClaw-LCD は小さな ESP32-S3 ボードをパーソナル AI アシスタントに変え、TFT ディスプレイにリアルタイムで WeChat 風チャットバブル UI を表示します。スマートフォンがなくても会話を直接確認できます。MimiClaw の実績あるエージェントループをベースに、Linux 不要、Node.js 不要、純粋な C のみで動作します。
 
-- **超小型** — Linux不要、Node.js不要、無駄なし — 純粋なCのみ
-- **便利** — Telegramでメッセージを送るだけ、あとはお任せ
+## このフォークの新機能
+
+| 機能 | 説明 |
+|------|------|
+| **RM68140 TFT LCD** | 320×480 8-bit パラレル、WeChat 風チャットバブル UI |
+| **ILI9341 TFT LCD** | 240×320 SPI、同じチャットバブル UI |
+| **CJK フォントサポート** | Source Han Sans 16 — 繁/簡体字中国語 + 日本語（ひらがな、カタカナ、漢字）|
+| **Latin-1 Supplement** | `·`、`©`、`°` などの一般的な非 ASCII 文字をカバー |
+| **フォント Kconfig オプション** | コンパイル時に CJK（~1.1 MB）または Latin のみ（Montserrat 14、~1.1 MB 節約）を選択 |
+| **LCD GPIO 保護** | ディスプレイピンを自動ブロック、AI の誤操作を防止 |
+| **WiFi スキャン修正** | スキャンが自動再接続ロジックを妨げないよう修正 |
+| **リトライカウントリセット** | WiFi スキャンまたは認証情報変更後にリトライカウントが正しくリセット |
+
+## MimiClaw の特徴
+
+- **超小型** — Linux 不要、Node.js 不要、無駄なし — 純粋な C のみ
+- **便利** — Telegram でメッセージを送るだけ、あとはお任せ
 - **忠実** — メモリから学習し、再起動しても忘れない
-- **省エネ** — USB給電、0.5W、24時間365日稼働
-- **お手頃** — ESP32-S3ボード1枚、$5、それだけ
+- **省エネ** — USB 給電、0.5W、24 時間 365 日稼働
+- **お手頃** — ESP32-S3 ボード 1 枚、約 $10、それだけ
 
 ## 仕組み
 
 ![](assets/mimiclaw.png)
 
-Telegramでメッセージを送ると、ESP32-S3がWiFi経由で受信し、エージェントループに送ります — LLMが思考し、ツールを呼び出し、メモリを読み取り — 返答を送り返します。**Anthropic (Claude)** と **OpenAI (GPT)** の両方をサポートし、実行時に切り替え可能です。すべてが$5のチップ上で動作し、データはすべてローカルのFlashに保存されます。
+Telegram でメッセージを送ると、ESP32-S3 が WiFi 経由で受信し、エージェントループに送ります — LLM が思考し、ツールを呼び出し、メモリを読み取り — 返答を送り返します。TFT ディスプレイが接続されている場合、会話はリアルタイムでバブルとして表示されます。**Anthropic (Claude)**、**OpenAI (GPT)**、**OpenRouter** の 3 つのプロバイダーをサポートし、実行時に切り替え可能です。
+
+## デモ
+
+| 会話デモ | 多言語表示 |
+|---|---|
+| ![会話デモ](docs/images/demo_chat.jpg) | ![多言語](docs/images/demo_multilingual.jpg) |
+
+*RM68140 320×480 — WeChat 風チャットバブル、CJK フォント対応（中国語 + 日本語）*
 
 ## クイックスタート
 
 ### 必要なもの
 
-- **ESP32-S3開発ボード**（16MB Flash + 8MB PSRAM搭載、例：小智AIボード、約$10）
-- **USB Type-Cケーブル**
-- **Telegram Botトークン** — Telegramで[@BotFather](https://t.me/BotFather)に話しかけて作成
-- **Anthropic APIキー** — [console.anthropic.com](https://console.anthropic.com)から取得、または **OpenAI APIキー** — [platform.openai.com](https://platform.openai.com)から取得
+- **ESP32-S3 開発ボード**（16MB Flash + 8MB PSRAM 搭載、例：小智 AI ボード、約 $10）
+- **USB Type-C ケーブル**
+- **Telegram Bot トークン** — Telegram で [@BotFather](https://t.me/BotFather) に話しかけて作成
+- **Anthropic API キー**、**OpenAI API キー**、または **OpenRouter API キー**
+- *（オプション）* RM68140 または ILI9341 TFT ディスプレイ
 
 ### インストール
 
 ```bash
-# まずESP-IDF v5.5+をインストールしてください:
+# まず ESP-IDF v5.5+ をインストールしてください:
 # https://docs.espressif.com/projects/esp-idf/en/v5.5.2/esp32s3/get-started/
 
-git clone https://github.com/memovai/mimiclaw.git
-cd mimiclaw
+git clone https://github.com/YOUR_USERNAME/mimiclaw-lcd.git
+cd mimiclaw-lcd
 
 idf.py set-target esp32s3
 ```
@@ -115,22 +138,22 @@ xcode-select --install
 
 ### 設定
 
-MimiClawは**2層設定**を採用しています：`mimi_secrets.h`でビルド時のデフォルト値を設定し、シリアルCLIで実行時にオーバーライドできます。CLI設定値はNVS Flashに保存され、ビルド時の値より優先されます。
+MimiClaw-LCD は**2 層設定**を採用しています：`mimi_secrets.h` でビルド時のデフォルト値を設定し、シリアル CLI で実行時にオーバーライドできます。
 
 ```bash
 cp main/mimi_secrets.h.example main/mimi_secrets.h
 ```
 
-`main/mimi_secrets.h`を編集：
+`main/mimi_secrets.h` を編集：
 
 ```c
 #define MIMI_SECRET_WIFI_SSID       "WiFi名"
 #define MIMI_SECRET_WIFI_PASS       "WiFiパスワード"
 #define MIMI_SECRET_TG_TOKEN        "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
 #define MIMI_SECRET_API_KEY         "sk-ant-api03-xxxxx"
-#define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic" または "openai"
-#define MIMI_SECRET_SEARCH_KEY      ""              // 任意：Brave Search APIキー
-#define MIMI_SECRET_TAVILY_KEY      ""              // 任意：Tavily APIキー（優先）
+#define MIMI_SECRET_MODEL_PROVIDER  "anthropic"     // "anthropic"、"openai"、または "openrouter"
+#define MIMI_SECRET_SEARCH_KEY      ""              // 任意：Brave Search API キー
+#define MIMI_SECRET_TAVILY_KEY      ""              // 任意：Tavily API キー（優先）
 #define MIMI_SECRET_PROXY_HOST      ""              // 任意：例 "10.0.0.1"
 #define MIMI_SECRET_PROXY_PORT      ""              // 任意：例 "7897"
 ```
@@ -138,45 +161,42 @@ cp main/mimi_secrets.h.example main/mimi_secrets.h
 ビルドとフラッシュ：
 
 ```bash
-# フルビルド（mimi_secrets.h変更後はfullclean必須）
+# フルビルド（mimi_secrets.h 変更後は fullclean 必須）
 idf.py fullclean && idf.py build
 
 # シリアルポートを確認
 ls /dev/cu.usb*          # macOS
 ls /dev/ttyACM*          # Linux
 
-# フラッシュとモニター（PORTをあなたのポートに置き換え）
-# USBアダプタ：おそらく /dev/cu.usbmodem11401（macOS）または /dev/ttyACM0（Linux）
+# フラッシュとモニター（PORT をあなたのポートに置き換え）
 idf.py -p PORT flash monitor
 ```
 
-> **重要：正しいUSBポートに接続してください！** ほとんどのESP32-S3ボードには2つのUSB-Cポートがあります。**USB**（ネイティブUSB Serial/JTAG）と書かれたポートを使用してください。**COM**（外部UARTブリッジ）と書かれたポートは使わないでください。間違ったポートに接続するとフラッシュ/モニターが失敗します。
+> **重要：正しい USB ポートに接続してください！** ほとんどの ESP32-S3 ボードには 2 つの USB-C ポートがあります。**USB**（ネイティブ USB Serial/JTAG）と書かれたポートを使用し、**COM** ポートは使わないでください。
 >
 > <details>
 > <summary>参考画像を表示</summary>
 >
-> <img src="assets/esp32s3-usb-port.jpg" alt="USBポートに接続、COMポートではありません" width="480" />
+> <img src="assets/esp32s3-usb-port.jpg" alt="USB ポートに接続" width="480" />
 >
 > </details>
 
-### CLIコマンド（UART/COMポート経由）
+### CLI コマンド（UART/COM ポート経由）
 
-シリアル接続で設定やデバッグができます。**設定コマンド**により再コンパイル不要で設定変更可能 — USBケーブルを挿すだけ。
-
-**実行時設定**（NVSに保存、ビルド時のデフォルト値をオーバーライド）：
+**実行時設定**（NVS に保存、ビルド時デフォルト値をオーバーライド）：
 
 ```
-mimi> wifi_set MySSID MyPassword   # WiFiネットワークを変更
-mimi> set_tg_token 123456:ABC...   # Telegram Botトークンを変更
-mimi> set_api_key sk-ant-api03-... # APIキーを変更（AnthropicまたはOpenAI）
-mimi> set_model_provider openai    # プロバイダーを切替（anthropic|openai）
-mimi> set_model gpt-4o             # LLMモデルを変更
-mimi> set_proxy 127.0.0.1 7897    # HTTPプロキシを設定
+mimi> wifi_set MySSID MyPassword   # WiFi ネットワークを変更
+mimi> set_tg_token 123456:ABC...   # Telegram Bot トークンを変更
+mimi> set_api_key sk-ant-api03-... # API キーを変更
+mimi> set_model_provider openai    # プロバイダーを切替（anthropic|openai|openrouter）
+mimi> set_model gpt-4o             # LLM モデルを変更
+mimi> set_proxy 127.0.0.1 7897     # HTTP プロキシを設定
 mimi> clear_proxy                  # プロキシを削除
-mimi> set_search_key BSA...        # Brave Search APIキーを設定
-mimi> set_tavily_key tvly-...      # Tavily APIキーを設定（優先）
+mimi> set_search_key BSA...        # Brave Search API キーを設定
+mimi> set_tavily_key tvly-...      # Tavily API キーを設定（優先）
 mimi> config_show                  # 全設定を表示（マスク付き）
-mimi> config_reset                 # NVSをクリア、ビルド時デフォルトに戻す
+mimi> config_reset                 # NVS をクリア、ビルド時デフォルトに戻す
 ```
 
 **デバッグ・メンテナンス：**
@@ -184,59 +204,47 @@ mimi> config_reset                 # NVSをクリア、ビルド時デフォル�
 ```
 mimi> wifi_status              # 接続されていますか？
 mimi> memory_read              # ボットが何を覚えているか確認
-mimi> memory_write "内容"       # MEMORY.mdに書き込み
-mimi> heap_info                # 空きRAMはどれくらい？
+mimi> memory_write "内容"       # MEMORY.md に書き込み
+mimi> heap_info                # 空き RAM はどれくらい？
 mimi> session_list             # 全チャットセッションを一覧
 mimi> session_clear 12345      # 会話を削除
-mimi> heartbeat_trigger           # ハートビートチェックを手動トリガー
-mimi> cron_start                  # cronスケジューラを今すぐ開始
-mimi> restart                     # 再起動
+mimi> heartbeat_trigger        # ハートビートチェックを手動トリガー
+mimi> cron_start               # cron スケジューラを今すぐ開始
+mimi> restart                  # 再起動
 ```
 
 ### USB（JTAG）vs UART：どのポートで何をするか
 
-ほとんどの ESP32-S3 開発ボードには **2つの USB-C ポート**があります：
-
 | ポート | 用途 |
 |--------|------|
-| **USB**（JTAG） | `idf.py flash`、JTAGデバッグ |
+| **USB**（JTAG） | `idf.py flash`、JTAG デバッグ |
 | **COM**（UART） | **REPL CLI**、シリアルコンソール |
 
-> **REPLにはUART（COM）ポートが必要です。** USB（JTAG）ポートは対話的なREPL入力をサポートしません。
+> **REPL には UART（COM）ポートが必要です。**
 
-<details>
-<summary>ポート詳細と推奨ワークフロー</summary>
+## ディスプレイ
 
-| ポート | ラベル | プロトコル |
-|--------|--------|------------|
-| **USB** | USB / JTAG | ネイティブ USB Serial/JTAG |
-| **COM** | UART / COM | 外部 UART ブリッジ（CP2102/CH340） |
+MimiClaw-LCD は 3 つの表示バックエンドをサポートしており、`idf.py menuconfig → MimiClaw Display` でコンパイル時に選択します：
 
-ESP-IDFコンソールはデフォルトでUART出力に設定されています（`CONFIG_ESP_CONSOLE_UART_DEFAULT=y`）。
+| バックエンド | 解像度 | インターフェース | 説明 |
+|------------|--------|----------------|------|
+| **RM68140** | 320×480 | 8-bit パラレル | TFT — チャットバブル UI（WeChat 風）|
+| **ILI9341** | 240×320 | SPI | TFT — チャットバブル UI |
+| SSD1306 | 128×64 | I2C | OLED — ステータス情報のみ表示 |
+| なし | — | — | デフォルト — ディスプレイなし |
 
-**両方のポートを同時に接続している場合：**
+各バックエンドの GPIO ピンは menuconfig で設定可能です。LCD が使用するピンは AI の GPIO アクセスから自動的にブロックされます。
 
-- USB（JTAG）ポートはフラッシュ/ダウンロードを処理し、補助シリアル出力を提供
-- UART（COM）ポートはREPL用のメインインタラクティブコンソールを提供
-- macOS では両ポートとも `/dev/cu.usbmodem*` または `/dev/cu.usbserial-*` として表示 — `ls /dev/cu.usb*` で確認
-- Linux では USB（JTAG）は通常 `/dev/ttyACM0`、UART は通常 `/dev/ttyUSB0`
+### フォントオプション（RM68140 / ILI9341 限定）
 
-**推奨ワークフロー：**
+`idf.py menuconfig → MimiClaw Display → CJK font`：
 
-```bash
-# USB（JTAG）ポートでフラッシュ
-idf.py -p /dev/cu.usbmodem11401 flash
-
-# UART（COM）ポートでREPLを開く
-idf.py -p /dev/cu.usbserial-110 monitor
-# または任意のシリアルターミナル：screen、minicom、PuTTY（ボーレート 115200）
-```
-
-</details>
+| オプション | Flash 使用量 | カバー範囲 |
+|-----------|------------|-----------|
+| **CJK（デフォルト）** | ~1.1 MB | 繁/簡体字中国語、日本語（ひらがな + カタカナ + 漢字）、Latin-1 |
+| Latin only | < 50 KB | ASCII + Latin Extended（Montserrat 14）|
 
 ## メモリ
-
-MimiClawはすべてのデータをプレーンテキストファイルとして保存します。直接読み取り・編集可能です：
 
 | ファイル | 説明 |
 |----------|------|
@@ -244,67 +252,65 @@ MimiClawはすべてのデータをプレーンテキストファイルとして
 | `USER.md` | あなたの情報 — 名前、好み、言語 |
 | `MEMORY.md` | 長期記憶 — ボットが常に覚えておくべきこと |
 | `HEARTBEAT.md` | タスクリスト — ボットが定期的にチェックして自律的に実行 |
-| `cron.json` | スケジュールジョブ — AIが作成した定期・単発タスク |
+| `cron.json` | スケジュールジョブ — AI が作成した定期・単発タスク |
 | `2026-02-05.md` | 日次メモ — 今日あったこと |
 | `tg_12345.jsonl` | チャット履歴 — ボットとの会話 |
 
 ## ツール
 
-MimiClawはAnthropicとOpenAI両方のツール呼び出しをサポート — LLMは会話中にツールを呼び出し、タスクが完了するまでループします（ReActパターン）。
-
 | ツール | 説明 |
 |--------|------|
-| `web_search` | Tavily（優先）またはBraveでウェブ検索し、最新情報を取得 |
-| `get_current_time` | HTTP経由で現在の日時を取得し、システムクロックを設定 |
-| `cron_add` | 定期または単発タスクをスケジュール（LLMが自律的にcronジョブを作成） |
-| `cron_list` | スケジュール済みのcronジョブを一覧表示 |
-| `cron_remove` | IDでcronジョブを削除 |
+| `web_search` | Tavily（優先）または Brave でウェブ検索 |
+| `get_current_time` | 現在の日時を取得し、システムクロックを設定 |
+| `cron_add` | 定期・単発・毎日指定時刻タスクをスケジュール |
+| `cron_list` | スケジュール済みの cron ジョブを一覧表示 |
+| `cron_remove` | ID で cron ジョブを削除 |
+| `set_config` | 実行時にモデル・プロバイダー・API キーを変更 |
+| `gpio_read` | GPIO ピンの現在の電圧レベルを読み取り |
+| `gpio_write` | GPIO ピンを HIGH/LOW に設定 |
+| `files_read` | SPIFFS ストレージからファイルを読み取り |
+| `files_write` | SPIFFS ストレージにファイルを書き込み |
 
-ウェブ検索を有効にするには、`mimi_secrets.h`で[Tavily APIキー](https://app.tavily.com/home)（優先、`MIMI_SECRET_TAVILY_KEY`）または[Brave Search APIキー](https://brave.com/search/api/)（`MIMI_SECRET_SEARCH_KEY`）を設定してください。
+## Cron タスク
 
-## Cronタスク
-
-MimiClawにはcronスケジューラが内蔵されており、AIが自律的にタスクをスケジュールできます。LLMは`cron_add`ツールで定期ジョブ（「N秒ごと」）や単発ジョブ（「UNIXタイムスタンプで指定」）を作成できます。ジョブが発火すると、メッセージがエージェントループに注入され、AIが起動してタスクを処理・応答します。
-
-ジョブはSPIFFS（`cron.json`）に永続化され、再起動後も保持されます。活用例：日次サマリー、定期リマインダー、スケジュールチェック。
+内蔵 cron スケジューラにより AI が自律的にタスクをスケジュールできます。ジョブが発火するとメッセージがエージェントループに注入され、AI が起動してタスクを処理・応答します。ジョブは SPIFFS（`cron.json`）に永続化され、再起動後も保持されます。
 
 ## ハートビート
 
-ハートビートサービスはSPIFFS上の`HEARTBEAT.md`を定期的に読み取り、アクション可能なタスクがあるかチェックします。未完了の項目（空行、見出し、チェック済み`- [x]`以外）が見つかると、エージェントループにプロンプトを送信し、AIが自律的に処理します。
+ハートビートサービスは `HEARTBEAT.md` を定期的に読み取り、未完了の項目が見つかるとエージェントループにプロンプトを送信し、AI が自律的に処理します。デフォルトは 30 分ごとです。
 
-これによりMimiClawはプロアクティブなアシスタントになります — `HEARTBEAT.md`にタスクを書き込めば、次のハートビートサイクルで自動的に拾い上げて実行します（デフォルト：30分ごと）。
+## ダイレクトコマンド
+
+`!` を先頭に付けてメッセージを送ると、LLM をバイパスしてコマンドを即時実行できます：
+
+```
+/help               — 全コマンドを表示
+/config             — 現在の設定を表示（API キーはマスク）
+/model <name>       — LLM モデルを即時切り替え
+/provider <name>    — プロバイダーを切替（anthropic / openai / openrouter）
+/apikey <key>       — API キーを更新
+/tavily <key>       — Tavily 検索キーを更新
+/heap               — 空き RAM を表示
+/restart            — デバイスを再起動
+```
 
 ## その他の機能
 
-- **WebSocketゲートウェイ** — ポート18789、LAN内から任意のWebSocketクライアントで接続
-- **OTAアップデート** — WiFi経由でファームウェア更新、USB不要
-- **デュアルコア** — ネットワークI/OとAI処理が別々のCPUコアで動作
-- **HTTPプロキシ** — CONNECTトンネル対応、制限付きネットワークに対応
-- **マルチプロバイダー** — Anthropic (Claude) と OpenAI (GPT) の両方をサポート、実行時に切り替え可能
-- **Cronスケジューラ** — AIが定期・単発タスクを自律的にスケジュール、再起動後も永続化
-- **ハートビート** — タスクファイルを定期チェックし、AIを自律的に駆動
-- **ツール呼び出し** — ReActエージェントループ、両プロバイダーでツール呼び出し対応
+- **WebSocket ゲートウェイ** — ポート 18789、LAN 内から任意の WebSocket クライアントで接続
+- **OTA アップデート** — WiFi 経由でファームウェア更新、USB 不要
+- **デュアルコア** — ネットワーク I/O と AI 処理が別々の CPU コアで動作
+- **HTTP プロキシ** — CONNECT トンネル対応、制限付きネットワークに対応
+- **マルチプロバイダー** — Anthropic (Claude)、OpenAI (GPT)、OpenRouter をサポート、実行時に切り替え可能
+- **Cron スケジューラ** — AI が定期・単発・毎日指定時刻タスクを自律的にスケジュール
+- **ハートビート** — タスクファイルを定期チェックし、AI を自律的に駆動
+- **ツール呼び出し** — ReAct エージェントループ、ウェブ検索・GPIO・ファイル・設定・Cron など対応
 
 ## 開発者向け
 
-技術的な詳細は`docs/`フォルダにあります：
-
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — システム設計、モジュール構成、タスクレイアウト、メモリバジェット、プロトコル、Flashパーティション
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — システム設計、モジュール構成、タスクレイアウト、メモリバジェット、プロトコル、Flash パーティション
 - **[docs/TODO.md](docs/TODO.md)** — 機能ギャップとロードマップ
-- **[docs/WIFI_ONBOARDING_AP.md](docs/WIFI_ONBOARDING_AP.md)** — ローカル `MimiClaw-XXXX` onboarding / 管理アクセスポイントの使い方
-- **[docs/im-integration/](docs/im-integration/README.md)** — IMチャネル統合ガイド（Feishuなど）
-
-## 貢献
-
-Issue や Pull Request を作成する前に、**[CONTRIBUTING.md](CONTRIBUTING.md)** をご確認ください。
-
-## コントリビューター
-
-MimiClaw に貢献してくれた皆さんに感謝します。
-
-<a href="https://github.com/memovai/mimiclaw/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=memovai/mimiclaw" alt="MimiClaw contributors" />
-</a>
+- **[docs/WIFI_ONBOARDING_AP.md](docs/WIFI_ONBOARDING_AP.md)** — ローカル onboarding アクセスポイントの使い方
+- **[docs/tool-setup/](docs/tool-setup/README.md)** — 外部サービス設定ガイド
 
 ## ライセンス
 
@@ -312,14 +318,6 @@ MIT
 
 ## 謝辞
 
-[OpenClaw](https://github.com/openclaw/openclaw)と[Nanobot](https://github.com/HKUDS/nanobot)にインスパイアされました。MimiClawはコアAIエージェントアーキテクチャを組み込みハードウェア向けに再実装しました — Linuxなし、サーバーなし、$5のチップだけ。
+本プロジェクトは **[MimiClaw](https://github.com/memovai/mimiclaw)**（作者：[memovai](https://github.com/memovai)）のフォークです。コア AI エージェントアーキテクチャ、ツールシステム、メモリ管理、通信チャネルはすべてオリジナルの MimiClaw プロジェクトに由来します。このフォークでは TFT LCD ディスプレイサポートと関連する改善が追加されています。
 
-## Star History
-
-<a href="https://www.star-history.com/?repos=memovai%2Fmimiclaw&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=memovai/mimiclaw&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=memovai/mimiclaw&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=memovai/mimiclaw&type=date&legend=top-left" />
- </picture>
-</a>
+MimiClaw 自体は [OpenClaw](https://github.com/openclaw/openclaw) と [Nanobot](https://github.com/HKUDS/nanobot) にインスパイアされています。

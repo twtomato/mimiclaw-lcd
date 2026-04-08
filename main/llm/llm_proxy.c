@@ -10,6 +10,8 @@
 #include "esp_heap_caps.h"
 #include "nvs.h"
 #include "cJSON.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static const char *TAG = "llm";
 
@@ -91,7 +93,7 @@ typedef struct {
 
 static esp_err_t resp_buf_init(resp_buf_t *rb, size_t initial_cap)
 {
-    rb->data = heap_caps_calloc(1, initial_cap, MALLOC_CAP_SPIRAM);
+    rb->data = heap_caps_calloc(1, initial_cap, MIMI_MALLOC_LARGE);
     if (!rb->data) return ESP_ERR_NO_MEM;
     rb->len = 0;
     rb->cap = initial_cap;
@@ -102,7 +104,7 @@ static esp_err_t resp_buf_append(resp_buf_t *rb, const char *data, size_t len)
 {
     while (rb->len + len >= rb->cap) {
         size_t new_cap = rb->cap * 2;
-        char *tmp = heap_caps_realloc(rb->data, new_cap, MALLOC_CAP_SPIRAM);
+        char *tmp = heap_caps_realloc(rb->data, new_cap, MIMI_MALLOC_LARGE);
         if (!tmp) return ESP_ERR_NO_MEM;
         rb->data = tmp;
         rb->cap = new_cap;
@@ -187,19 +189,36 @@ static bool provider_is_openai(void)
     return strcmp(s_provider, "openai") == 0;
 }
 
+static bool provider_is_openrouter(void)
+{
+    return strcmp(s_provider, "openrouter") == 0;
+}
+
+/* OpenAI-compatible: openai or openrouter */
+static bool provider_is_openai_compat(void)
+{
+    return provider_is_openai() || provider_is_openrouter();
+}
+
 static const char *llm_api_url(void)
 {
-    return provider_is_openai() ? MIMI_OPENAI_API_URL : MIMI_LLM_API_URL;
+    if (provider_is_openrouter()) return MIMI_OPENROUTER_API_URL;
+    if (provider_is_openai())     return MIMI_OPENAI_API_URL;
+    return MIMI_LLM_API_URL;
 }
 
 static const char *llm_api_host(void)
 {
-    return provider_is_openai() ? "api.openai.com" : "api.anthropic.com";
+    if (provider_is_openrouter()) return "openrouter.ai";
+    if (provider_is_openai())     return "api.openai.com";
+    return "api.anthropic.com";
 }
 
 static const char *llm_api_path(void)
 {
-    return provider_is_openai() ? "/v1/chat/completions" : "/v1/messages";
+    if (provider_is_openrouter()) return "/api/v1/chat/completions";
+    if (provider_is_openai())     return "/v1/chat/completions";
+    return "/v1/messages";
 }
 
 /* ── Init ─────────────────────────────────────────────────────── */
@@ -265,11 +284,14 @@ static esp_err_t llm_http_direct(const char *post_data, resp_buf_t *rb, int *out
 
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/json");
-    if (provider_is_openai()) {
+    if (provider_is_openai_compat()) {
         if (s_api_key[0]) {
             char auth[LLM_API_KEY_MAX_LEN + 16];
             snprintf(auth, sizeof(auth), "Bearer %s", s_api_key);
             esp_http_client_set_header(client, "Authorization", auth);
+        }
+        if (provider_is_openrouter()) {
+            esp_http_client_set_header(client, "X-Title", MIMI_OPENROUTER_APP_NAME);
         }
     } else {
         esp_http_client_set_header(client, "x-api-key", s_api_key);
@@ -293,15 +315,28 @@ static esp_err_t llm_http_via_proxy(const char *post_data, resp_buf_t *rb, int *
     int body_len = strlen(post_data);
     char header[1024];
     int hlen = 0;
-    if (provider_is_openai()) {
-        hlen = snprintf(header, sizeof(header),
-            "POST %s HTTP/1.1\r\n"
-            "Host: %s\r\n"
-            "Content-Type: application/json\r\n"
-            "Authorization: Bearer %s\r\n"
-            "Content-Length: %d\r\n"
-            "Connection: close\r\n\r\n",
-            llm_api_path(), llm_api_host(), s_api_key, body_len);
+    if (provider_is_openai_compat()) {
+        if (provider_is_openrouter()) {
+            hlen = snprintf(header, sizeof(header),
+                "POST %s HTTP/1.1\r\n"
+                "Host: %s\r\n"
+                "Content-Type: application/json\r\n"
+                "Authorization: Bearer %s\r\n"
+                "X-Title: %s\r\n"
+                "Content-Length: %d\r\n"
+                "Connection: close\r\n\r\n",
+                llm_api_path(), llm_api_host(), s_api_key,
+                MIMI_OPENROUTER_APP_NAME, body_len);
+        } else {
+            hlen = snprintf(header, sizeof(header),
+                "POST %s HTTP/1.1\r\n"
+                "Host: %s\r\n"
+                "Content-Type: application/json\r\n"
+                "Authorization: Bearer %s\r\n"
+                "Content-Length: %d\r\n"
+                "Connection: close\r\n\r\n",
+                llm_api_path(), llm_api_host(), s_api_key, body_len);
+        }
     } else {
         hlen = snprintf(header, sizeof(header),
             "POST %s HTTP/1.1\r\n"
@@ -565,7 +600,7 @@ esp_err_t llm_chat_tools(const char *system_prompt,
         cJSON_AddNumberToObject(body, "max_tokens", MIMI_LLM_MAX_TOKENS);
     }
 
-    if (provider_is_openai()) {
+    if (provider_is_openai_compat()) {
         cJSON *openai_msgs = convert_messages_openai(system_prompt, messages);
         cJSON_AddItemToObject(body, "messages", openai_msgs);
 
@@ -600,7 +635,7 @@ esp_err_t llm_chat_tools(const char *system_prompt,
              s_provider, s_model, (int)strlen(post_data));
     llm_log_payload("LLM tools request", post_data);
 
-    /* HTTP call */
+    /* HTTP call — retry once on transient network errors or 429 rate limit */
     resp_buf_t rb;
     if (resp_buf_init(&rb, MIMI_LLM_STREAM_BUF_SIZE) != ESP_OK) {
         free(post_data);
@@ -609,6 +644,31 @@ esp_err_t llm_chat_tools(const char *system_prompt,
 
     int status = 0;
     esp_err_t err = llm_http_call(post_data, &rb, &status);
+
+    /* Retry on network error (connection reset, TLS failure) */
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "HTTP request failed (%s), retrying in 1s...", esp_err_to_name(err));
+        resp_buf_free(&rb);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (resp_buf_init(&rb, MIMI_LLM_STREAM_BUF_SIZE) != ESP_OK) {
+            free(post_data);
+            return ESP_ERR_NO_MEM;
+        }
+        err = llm_http_call(post_data, &rb, &status);
+    }
+
+    /* Retry on 429 rate limit (free model routing may pick a throttled provider) */
+    if (err == ESP_OK && status == 429) {
+        ESP_LOGW(TAG, "API rate limited (429), retrying in 3s...");
+        resp_buf_free(&rb);
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        if (resp_buf_init(&rb, MIMI_LLM_STREAM_BUF_SIZE) != ESP_OK) {
+            free(post_data);
+            return ESP_ERR_NO_MEM;
+        }
+        err = llm_http_call(post_data, &rb, &status);
+    }
+
     free(post_data);
 
     if (err != ESP_OK) {
@@ -635,7 +695,7 @@ esp_err_t llm_chat_tools(const char *system_prompt,
         return ESP_FAIL;
     }
 
-    if (provider_is_openai()) {
+    if (provider_is_openai_compat()) {
         cJSON *choices = cJSON_GetObjectItem(root, "choices");
         cJSON *choice0 = choices && cJSON_IsArray(choices) ? cJSON_GetArrayItem(choices, 0) : NULL;
         if (choice0) {
@@ -783,6 +843,9 @@ esp_err_t llm_set_api_key(const char *api_key)
     ESP_LOGI(TAG, "API key saved");
     return ESP_OK;
 }
+
+const char *llm_get_provider(void) { return s_provider; }
+const char *llm_get_model(void)    { return s_model; }
 
 esp_err_t llm_set_model(const char *model)
 {

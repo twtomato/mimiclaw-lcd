@@ -1,0 +1,182 @@
+menu "MimiClaw Display"
+
+    choice MIMI_DISPLAY_BACKEND
+        prompt "Display backend"
+        default MIMI_DISPLAY_SSD1306
+        help
+            Select the display hardware connected to this board.
+            The selection is applied at compile time.
+            Choose "None" to disable the display subsystem entirely.
+
+        config MIMI_DISPLAY_NONE
+            bool "None (no display)"
+
+        config MIMI_DISPLAY_SSD1306
+            bool "SSD1306 I2C OLED (128x64)"
+
+        config MIMI_DISPLAY_RM68140
+            bool "RM68140 8-bit parallel TFT (320x480, LVGL)"
+
+        config MIMI_DISPLAY_ILI9341
+            bool "ILI9341 SPI TFT (240x320, LVGL)"
+
+    endchoice
+
+    # ── SSD1306 I2C options ──────────────────────────────────────────
+
+    config MIMI_DISPLAY_I2C_PORT
+        int "I2C port number"
+        depends on MIMI_DISPLAY_SSD1306
+        range 0 1
+        default 0
+
+    config MIMI_DISPLAY_SDA_PIN
+        int "SDA GPIO"
+        depends on MIMI_DISPLAY_SSD1306
+        default 41
+
+    config MIMI_DISPLAY_SCL_PIN
+        int "SCL GPIO"
+        depends on MIMI_DISPLAY_SSD1306
+        default 42
+
+    config MIMI_DISPLAY_I2C_ADDR
+        hex "I2C address (0x3C or 0x3D)"
+        depends on MIMI_DISPLAY_SSD1306
+        default 0x3C
+
+    # ── RM68140 8-bit parallel options ───────────────────────────────
+
+    config MIMI_RM_CS_PIN
+        int "CS (chip select) GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 6
+
+    config MIMI_RM_DC_PIN
+        int "DC (data/command) GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 7
+
+    config MIMI_RM_RST_PIN
+        int "RST (reset) GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 5
+
+    config MIMI_RM_WR_PIN
+        int "WR (write strobe) GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 1
+
+    config MIMI_RM_RD_PIN
+        int "RD (read strobe) GPIO — held HIGH for write-only use"
+        depends on MIMI_DISPLAY_RM68140
+        default 2
+
+    config MIMI_RM_BL_PIN
+        int "Backlight GPIO (-1 = wired to VCC / always on)"
+        depends on MIMI_DISPLAY_RM68140
+        range -1 48
+        default -1
+
+    config MIMI_RM_D0
+        int "D0 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 21
+
+    config MIMI_RM_D1
+        int "D1 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 46
+
+    config MIMI_RM_D2
+        int "D2 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 18
+
+    config MIMI_RM_D3
+        int "D3 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 17
+
+    config MIMI_RM_D4
+        int "D4 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 19
+
+    config MIMI_RM_D5
+        int "D5 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 20
+
+    config MIMI_RM_D6
+        int "D6 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 3
+
+    config MIMI_RM_D7
+        int "D7 GPIO"
+        depends on MIMI_DISPLAY_RM68140
+        default 14
+
+    # ── LVGL font options (RM68140 / ILI9341 only) ──────────────────
+
+    choice MIMI_DISPLAY_FONT
+        prompt "CJK font"
+        depends on MIMI_DISPLAY_RM68140 || MIMI_DISPLAY_ILI9341
+        default MIMI_DISPLAY_FONT_CJK
+        help
+            Select the font bundle to compile into firmware.
+            CJK (default): includes Source Han Sans 16 (~1.1 MB) which
+            covers Traditional/Simplified Chinese, Japanese (Kanji +
+            Hiragana + Katakana).
+            Latin only: omits the CJK font entirely, saving ~1.1 MB of
+            flash. Text is rendered with Montserrat 14 (ASCII + Latin
+            Extended). CJK characters will appear as boxes.
+
+        config MIMI_DISPLAY_FONT_CJK
+            bool "CJK (Chinese + Japanese) — Source Han Sans 16"
+
+        config MIMI_DISPLAY_FONT_LATIN
+            bool "Latin only — Montserrat 14, no CJK font"
+
+    endchoice
+
+    # ── ILI9341 SPI options ──────────────────────────────────────────
+
+    config MIMI_ILI_CS_PIN
+        int "CS (chip select) GPIO"
+        depends on MIMI_DISPLAY_ILI9341
+        default 12
+
+    config MIMI_ILI_DC_PIN
+        int "DC (data/command) GPIO"
+        depends on MIMI_DISPLAY_ILI9341
+        default 11
+
+    config MIMI_ILI_RST_PIN
+        int "RST (reset) GPIO"
+        depends on MIMI_DISPLAY_ILI9341
+        default 13
+
+    config MIMI_ILI_MOSI_PIN
+        int "MOSI (SDA) GPIO"
+        depends on MIMI_DISPLAY_ILI9341
+        default 10
+
+    config MIMI_ILI_SCLK_PIN
+        int "SCLK GPIO"
+        depends on MIMI_DISPLAY_ILI9341
+        default 46
+
+    config MIMI_ILI_BL_PIN
+        int "Backlight GPIO (-1 = wired to VCC / always on)"
+        depends on MIMI_DISPLAY_ILI9341
+        range -1 48
+        default -1
+
+    config MIMI_ILI_SPI_HZ
+        int "SPI clock frequency (Hz)"
+        depends on MIMI_DISPLAY_ILI9341
+        default 40000000
+
+endmenu

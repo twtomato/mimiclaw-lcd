@@ -23,8 +23,16 @@ static char s_brave_key[128] = {0};
 static char s_tavily_key[128] = {0};
 static search_provider_t s_provider = SEARCH_PROVIDER_NONE;
 
+#ifdef CONFIG_SPIRAM
 #define SEARCH_BUF_SIZE     (16 * 1024)
+#else
+#define SEARCH_BUF_SIZE     (12 * 1024)
+#endif
+#ifdef CONFIG_SPIRAM
 #define SEARCH_RESULT_COUNT 5
+#else
+#define SEARCH_RESULT_COUNT 3
+#endif
 
 /* ── Response accumulator ─────────────────────────────────────── */
 
@@ -43,6 +51,8 @@ static esp_err_t http_event_handler(esp_http_client_event_t *evt)
             memcpy(sb->data + sb->len, evt->data, evt->data_len);
             sb->len += evt->data_len;
             sb->data[sb->len] = '\0';
+        } else {
+            ESP_LOGW(TAG, "Search buffer full (%d bytes), response truncated", (int)sb->cap);
         }
     }
     return ESP_OK;
@@ -444,9 +454,8 @@ esp_err_t tool_web_search_execute(const char *input_json, char *output, size_t o
     snprintf(query_copy, sizeof(query_copy), "%s", query->valuestring);
     cJSON_Delete(input);
 
-    /* Allocate response buffer from PSRAM */
     search_buf_t sb = {0};
-    sb.data = heap_caps_calloc(1, SEARCH_BUF_SIZE, MALLOC_CAP_SPIRAM);
+    sb.data = heap_caps_calloc(1, SEARCH_BUF_SIZE, MIMI_MALLOC_LARGE);
     if (!sb.data) {
         snprintf(output, output_size, "Error: Out of memory");
         return ESP_ERR_NO_MEM;

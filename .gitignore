@@ -54,11 +54,17 @@ nanobot/
 .mcp.json
 .mem/
 .memignore
-# Version subdirectories (working copies)
-v0.1.0/
-
 # OS
 .DS_Store
 Thumbs.db
 references/
 .venv/
+
+# Local / personal files
+api.txt
+changes.md
+IMG_*.JPG
+IMG_*.jpg
+*.txt.bak
+.claude/
+openrouter*.txt

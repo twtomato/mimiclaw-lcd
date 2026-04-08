@@ -45,7 +45,9 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         if (disc) {
             ESP_LOGW(TAG, "Disconnected (reason=%d:%s)", disc->reason, wifi_reason_to_str(disc->reason));
         }
-        if (s_reconnect_enabled && s_retry_count < MIMI_WIFI_MAX_RETRY) {
+        if (!s_reconnect_enabled) {
+            /* Reconnect disabled (scan in progress or intentional stop) — ignore */
+        } else if (s_retry_count < MIMI_WIFI_MAX_RETRY) {
             /* Exponential backoff: 1s, 2s, 4s, 8s, ... capped at 30s */
             uint32_t delay_ms = MIMI_WIFI_RETRY_BASE_MS << s_retry_count;
             if (delay_ms > MIMI_WIFI_RETRY_MAX_MS) {
@@ -182,7 +184,9 @@ void wifi_manager_scan_and_print(void)
 
     ESP_LOGI(TAG, "Scanning nearby APs...");
 
-    /* Pause auto-connect to allow scan */
+    /* Disable auto-reconnect so the disconnect event handler does not
+     * schedule esp_wifi_connect() while the scan is in progress. */
+    s_reconnect_enabled = false;
     esp_wifi_disconnect();
     vTaskDelay(pdMS_TO_TICKS(200));
 
@@ -197,6 +201,8 @@ void wifi_manager_scan_and_print(void)
     }
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Scan failed: %s", esp_err_to_name(err));
+        s_retry_count = 0;
+        s_reconnect_enabled = true;
         esp_wifi_connect();
         return;
     }
@@ -205,6 +211,8 @@ void wifi_manager_scan_and_print(void)
     esp_wifi_scan_get_ap_num(&ap_count);
     if (ap_count == 0) {
         ESP_LOGW(TAG, "No APs found");
+        s_retry_count = 0;
+        s_reconnect_enabled = true;
         esp_wifi_connect();
         return;
     }
@@ -212,6 +220,9 @@ void wifi_manager_scan_and_print(void)
     wifi_ap_record_t *ap_list = calloc(ap_count, sizeof(wifi_ap_record_t));
     if (!ap_list) {
         ESP_LOGE(TAG, "Out of memory for AP list");
+        s_retry_count = 0;
+        s_reconnect_enabled = true;
+        esp_wifi_connect();
         return;
     }
 
@@ -219,6 +230,8 @@ void wifi_manager_scan_and_print(void)
     if (esp_wifi_scan_get_ap_records(&ap_max, ap_list) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get AP records");
         free(ap_list);
+        s_retry_count = 0;
+        s_reconnect_enabled = true;
         esp_wifi_connect();
         return;
     }
@@ -231,6 +244,8 @@ void wifi_manager_scan_and_print(void)
     }
 
     free(ap_list);
+    s_retry_count = 0;
+    s_reconnect_enabled = true;
     esp_wifi_connect();
 }
 

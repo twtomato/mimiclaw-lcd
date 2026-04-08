@@ -6,3 +6,15 @@ CONFIG_LWIP_LOCAL_HOSTNAME="mimiclaw"
 
 # SPIFFS: increase max filename length (default 32 is too short for session files)
 CONFIG_SPIFFS_OBJ_NAME_LEN=64
+
+# Timer task: increase stack to prevent overflow if timer callbacks do any work
+CONFIG_FREERTOS_TIMER_TASK_STACK_DEPTH=4096
+
+# Display backend (menuconfig: MimiClaw Display -> Display backend)
+CONFIG_MIMI_DISPLAY_RM68140=y
+
+# LVGL: 16-bit colour, no byte-swap (bit-bang writes big-endian directly)
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_COLOR_16_SWAP=n
+CONFIG_LV_MEM_SIZE_KILOBYTES=64
+CONFIG_LV_FONT_MONTSERRAT_20=y
