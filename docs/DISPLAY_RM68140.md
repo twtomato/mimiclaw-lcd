@@ -19,7 +19,7 @@
 | WR | 1 |
 | RD | 2（接 HIGH，僅寫入） |
 | BL | -1（背光直接接 VCC） |
-| D0–D7 | 21, 15, 18, 17, 19, 20, 3, 14 |
+| D0–D7 | 21, 46, 18, 17, 19, 20, 3, 14 |
 
 可透過 `idf.py menuconfig → MimiClaw Display` 修改。
 
@@ -42,18 +42,22 @@
 改用 **GPIO 暫存器直寫 + 256 entry lookup table**：
 
 ```c
-// 初始化時預計算 byte → GPIO bitmask
-static uint32_t s_byte_mask[256];
-static uint32_t s_data_mask;
+// 初始化時預計算 byte → GPIO bitmask（lo: GPIO0–31, hi: GPIO32–53）
+static uint32_t s_lo_mask[256], s_hi_mask[256];
+static uint32_t s_lo_data_mask, s_hi_data_mask;
 
-// 寫入一個 byte（4 次暫存器寫入，每次約 4 CPU cycles）
+// 寫入一個 byte（8 次暫存器寫入，支援 GPIO32+）
 static inline void write8(uint8_t byte) {
-    REG_WRITE(GPIO_OUT_W1TC_REG, s_data_mask);           // 清除 D0-D7
-    REG_WRITE(GPIO_OUT_W1TS_REG, s_byte_mask[byte]);     // 設定 D0-D7
-    REG_WRITE(GPIO_OUT_W1TC_REG, 1u << MIMI_RM_WR_PIN); // WR low
-    REG_WRITE(GPIO_OUT_W1TS_REG, 1u << MIMI_RM_WR_PIN); // WR high
+    REG_WRITE(GPIO_OUT_W1TC_REG,  s_lo_data_mask);
+    REG_WRITE(GPIO_OUT1_W1TC_REG, s_hi_data_mask);
+    REG_WRITE(GPIO_OUT_W1TS_REG,  s_lo_mask[byte]);
+    REG_WRITE(GPIO_OUT1_W1TS_REG, s_hi_mask[byte]);
+    REG_WRITE(GPIO_OUT_W1TC_REG,  1u << MIMI_RM_WR_PIN); // WR low
+    REG_WRITE(GPIO_OUT_W1TS_REG,  1u << MIMI_RM_WR_PIN); // WR high
 }
 ```
+
+> **注意**：使用 `GPIO_OUT1_W1TC/TS_REG` 處理 GPIO32+ 資料腳（如 GPIO46）。若所有資料腳均在 GPIO0–31，hi mask 全為 0，行為與舊版一致。
 
 效能提升約 10×，全畫面刷新降至 ~30–60 ms。
 
@@ -98,12 +102,16 @@ DISPON  (0x29)  → 等待 50 ms
 ## UI Layout（320 × 480）
 
 ```
-y= 14   MimiClaw                  標題（Montserrat 20，白色）
-y= 50   ──────────────────────    分隔線
-y= 66   Provider:  openrouter     lbl_a（主要資訊）
-y=100   Model:     minimax-m2.5   lbl_b（次要資訊）
-y=130   IP:        192.168.x.x    lbl_bot（IP，灰色）
-y=150   Thinking... / 192.168.4.1 lbl_c（僅 Thinking / WiFi 失敗狀態顯示）
+y=  0– 59   Banner logo（320×60，RGB565 圖片）
+y= 60–119   Status 區（60px）
+              lbl_a: #808080 Provider:# openrouter
+              lbl_b: #808080 Model:# minimax-m2.5
+              lbl_ip: #808080 IP:# 192.168.x.x
+y=120–131   漸層分隔線（12px）
+y=132–479   對話氣泡區（348px，LVGL scroll container）
+              User 訊息：右對齊，藍紫色泡泡（#5B6BE8）
+              AI 訊息：左對齊，深色泡泡（#1E2C3A）
+              System 訊息：置中，灰藍色泡泡（#2A3A4A）
 ```
 
 Key/value 雙色顯示採用 LVGL recolor 語法：
@@ -114,8 +122,5 @@ lv_label_set_text(lbl, "#808080 Provider:# openrouter");
 //                       ^灰色 key^  ^預設色 value^
 ```
 
----
+> **Thinking 指示器**：`s_lbl_c` 目前設為 `LV_OBJ_FLAG_HIDDEN`，待改以對話氣泡方式實作。
 
-## 獨立測試專案
-
-`d:\Work\rm68140_test\` — 不含 MimiClaw 業務邏輯的最小化測試專案，可用於驗證硬體接線與顯示器相容性。
