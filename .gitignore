@@ -68,3 +68,7 @@ IMG_*.jpg
 *.txt.bak
 .claude/
 openrouter*.txt
+
+# Personal device config (keep local, do not sync)
+spiffs_data/config/SOUL.md
+spiffs_data/config/USER.md
