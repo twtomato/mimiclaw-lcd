@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong><a href="README.md">English</a> | <a href="README_CN.md">中文</a> | <a href="README_TW.md">繁中</a> | <a href="README_JA.md">日本語</a></strong>
+  <strong><a href="README.md">English</a> | <a href="README_CN.md">简中</a> | <a href="README_TW.md">繁中</a> | <a href="README_JA.md">日本語</a></strong>
 </p>
 
 > **Fork of [MimiClaw](https://github.com/memovai/mimiclaw) by [memovai](https://github.com/memovai).**
