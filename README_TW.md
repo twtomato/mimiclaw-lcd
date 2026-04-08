@@ -318,6 +318,8 @@ GPIO 腳位均可在 menuconfig 中設定。LCD 佔用的腳位會自動封鎖�
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — 系統設計、模組劃分、任務佈局、記憶體分配、協定、Flash 分區
 - **[docs/TODO.md](docs/TODO.md)** — 功能差距和路線圖
+- **[docs/DISPLAY_RM68140.md](docs/DISPLAY_RM68140.md)** — RM68140 320×480 並列顯示器：接線、bit-bang 驅動、UI 佈局
+- **[docs/DISPLAY_ILI9341.md](docs/DISPLAY_ILI9341.md)** — ILI9341 240×320 SPI 顯示器：接線、DMA 驅動、端序、UI 佈局
 - **[docs/WIFI_ONBOARDING_AP.md](docs/WIFI_ONBOARDING_AP.md)** — 本地 onboarding 熱點使用說明
 - **[docs/tool-setup/](docs/tool-setup/README.md)** — 外部服務設定指南
 

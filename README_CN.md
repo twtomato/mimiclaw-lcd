@@ -318,6 +318,8 @@ MimiClaw-LCD 支持三种显示后端，通过 `idf.py menuconfig → MimiClaw D
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — 系统设计、模块划分、任务布局、内存分配、协议、Flash 分区
 - **[docs/TODO.md](docs/TODO.md)** — 功能差距和路线图
+- **[docs/DISPLAY_RM68140.md](docs/DISPLAY_RM68140.md)** — RM68140 320×480 并口显示屏：接线、bit-bang 驱动、UI 布局
+- **[docs/DISPLAY_ILI9341.md](docs/DISPLAY_ILI9341.md)** — ILI9341 240×320 SPI 显示屏：接线、DMA 驱动、字节序、UI 布局
 - **[docs/WIFI_ONBOARDING_AP.md](docs/WIFI_ONBOARDING_AP.md)** — 本地 onboarding 热点使用说明
 - **[docs/tool-setup/](docs/tool-setup/README.md)** — 外部服务配置指南
 

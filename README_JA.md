@@ -309,6 +309,8 @@ MimiClaw-LCD は 3 つの表示バックエンドをサポートしており、`
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — システム設計、モジュール構成、タスクレイアウト、メモリバジェット、プロトコル、Flash パーティション
 - **[docs/TODO.md](docs/TODO.md)** — 機能ギャップとロードマップ
+- **[docs/DISPLAY_RM68140.md](docs/DISPLAY_RM68140.md)** — RM68140 320×480 パラレル LCD：配線、bit-bang ドライバ、UI レイアウト
+- **[docs/DISPLAY_ILI9341.md](docs/DISPLAY_ILI9341.md)** — ILI9341 240×320 SPI LCD：配線、DMA ドライバ、バイトスワップ、UI レイアウト
 - **[docs/WIFI_ONBOARDING_AP.md](docs/WIFI_ONBOARDING_AP.md)** — ローカル onboarding アクセスポイントの使い方
 - **[docs/tool-setup/](docs/tool-setup/README.md)** — 外部サービス設定ガイド
 
