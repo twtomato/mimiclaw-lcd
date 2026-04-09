@@ -12,7 +12,7 @@
   <strong><a href="README.md">English</a> | <a href="README_CN.md">简中</a> | <a href="README_TW.md">繁中</a> | <a href="README_JA.md">日本語</a></strong>
 </p>
 
-> **Fork of [MimiClaw](https://github.com/memovai/mimiclaw) by [memovai](https://github.com/memovai).**
+> **Based on [MimiClaw v0.1.1](https://github.com/memovai/mimiclaw) by [memovai](https://github.com/memovai).**
 > This fork adds TFT LCD display support, CJK font rendering, and several stability improvements.
 > All core AI agent architecture is from the original MimiClaw project.
 
@@ -360,6 +360,6 @@ MIT
 
 ## Acknowledgments
 
-This project is a fork of **[MimiClaw](https://github.com/memovai/mimiclaw)** by [memovai](https://github.com/memovai). The core AI agent architecture, tool system, memory management, and communication channels are from the original MimiClaw project. This fork adds TFT LCD display support and related improvements.
+This project is based on **[MimiClaw v0.1.1](https://github.com/memovai/mimiclaw)** by [memovai](https://github.com/memovai). The core AI agent architecture, tool system, memory management, and communication channels are from the original MimiClaw project. This fork adds TFT LCD display support and related improvements.
 
 MimiClaw itself was inspired by [OpenClaw](https://github.com/openclaw/openclaw) and [Nanobot](https://github.com/HKUDS/nanobot).

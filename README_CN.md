@@ -12,7 +12,7 @@
   <strong><a href="README.md">English</a> | <a href="README_CN.md">简中</a> | <a href="README_TW.md">繁中</a> | <a href="README_JA.md">日本語</a></strong>
 </p>
 
-> **Fork 自 [MimiClaw](https://github.com/memovai/mimiclaw)，原作者 [memovai](https://github.com/memovai)。**
+> **基于 [MimiClaw v0.1.1](https://github.com/memovai/mimiclaw)，原作者 [memovai](https://github.com/memovai)。**
 > 本 fork 新增 TFT LCD 显示支持、CJK 字体渲染及若干稳定性改进。
 > 核心 AI Agent 架构均来自原始 MimiClaw 项目。
 
@@ -329,6 +329,6 @@ MIT
 
 ## 致谢
 
-本项目 fork 自 **[MimiClaw](https://github.com/memovai/mimiclaw)**，原作者 [memovai](https://github.com/memovai)。核心 AI Agent 架构、工具系统、内存管理与通信渠道均来自原始 MimiClaw 项目，本 fork 新增 TFT LCD 显示支持及相关改进。
+本项目基于 **[MimiClaw v0.1.1](https://github.com/memovai/mimiclaw)**，原作者 [memovai](https://github.com/memovai)。核心 AI Agent 架构、工具系统、内存管理与通信渠道均来自原始 MimiClaw 项目，本 fork 新增 TFT LCD 显示支持及相关改进。
 
 MimiClaw 本身灵感来自 [OpenClaw](https://github.com/openclaw/openclaw) 和 [Nanobot](https://github.com/HKUDS/nanobot)。
