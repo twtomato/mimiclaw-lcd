@@ -23,7 +23,7 @@
 #define MIMI_SECRET_MODEL           ""
 #endif
 #ifndef MIMI_SECRET_MODEL_PROVIDER
-#define MIMI_SECRET_MODEL_PROVIDER  "openrouter"
+#define MIMI_SECRET_MODEL_PROVIDER  ""
 #endif
 #ifndef MIMI_SECRET_PROXY_HOST
 #define MIMI_SECRET_PROXY_HOST      ""
