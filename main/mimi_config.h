@@ -23,7 +23,7 @@
 #define MIMI_SECRET_MODEL           ""
 #endif
 #ifndef MIMI_SECRET_MODEL_PROVIDER
-#define MIMI_SECRET_MODEL_PROVIDER  "anthropic"
+#define MIMI_SECRET_MODEL_PROVIDER  "openrouter"
 #endif
 #ifndef MIMI_SECRET_PROXY_HOST
 #define MIMI_SECRET_PROXY_HOST      ""
