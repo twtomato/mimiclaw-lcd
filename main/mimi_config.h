@@ -100,7 +100,7 @@
 #endif
 
 /* LLM */
-#define MIMI_LLM_DEFAULT_MODEL       "minimax/minimax-m2.5"    //"openrouter/free" //"claude-opus-4-5"
+#define MIMI_LLM_DEFAULT_MODEL       "google/gemini-2.0-flash-001"    //"openrouter/free" //"claude-opus-4-5"
 #define MIMI_LLM_PROVIDER_DEFAULT    "openrouter" //"openai"   //"anthropic"
 #define MIMI_LLM_MAX_TOKENS          4096
 #define MIMI_LLM_API_URL             "https://api.anthropic.com/v1/messages"

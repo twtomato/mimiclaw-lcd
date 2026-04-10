@@ -3,6 +3,8 @@
 #include "llm/llm_proxy.h"
 #include "tools/tool_web_search.h"
 #include "proxy/http_proxy.h"
+#include "display/display_service.h"
+#include "wifi/wifi_manager.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -133,6 +135,7 @@ static void cmd_set_model(const char *arg, char *out, size_t sz)
     if (!arg || !arg[0]) { snprintf(out, sz, "Usage: /model <name>"); return; }
     if (llm_set_model(arg) == ESP_OK) {
         llm_proxy_init();
+        display_service_show_ready(wifi_manager_get_ip(), llm_get_provider(), llm_get_model());
         snprintf(out, sz, "OK: model = %s", arg);
         ESP_LOGI(TAG, "Model set to: %s", arg);
     } else {
@@ -145,6 +148,7 @@ static void cmd_set_provider(const char *arg, char *out, size_t sz)
     if (!arg || !arg[0]) { snprintf(out, sz, "Usage: /provider <name>"); return; }
     if (llm_set_provider(arg) == ESP_OK) {
         llm_proxy_init();
+        display_service_show_ready(wifi_manager_get_ip(), llm_get_provider(), llm_get_model());
         snprintf(out, sz, "OK: provider = %s", arg);
         ESP_LOGI(TAG, "Provider set to: %s", arg);
     } else {

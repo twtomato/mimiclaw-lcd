@@ -1,6 +1,7 @@
 #include "serial_cli.h"
 #include "mimi_config.h"
 #include "wifi/wifi_manager.h"
+#include "display/display_service.h"
 #include "channels/telegram/telegram_bot.h"
 #include "channels/feishu/feishu_bot.h"
 #include "llm/llm_proxy.h"
@@ -149,6 +150,8 @@ static int cmd_set_model(int argc, char **argv)
         return 1;
     }
     llm_set_model(model_args.model->sval[0]);
+    llm_proxy_init();
+    display_service_show_ready(wifi_manager_get_ip(), llm_get_provider(), llm_get_model());
     printf("Model set.\n");
     return 0;
 }
@@ -167,6 +170,8 @@ static int cmd_set_model_provider(int argc, char **argv)
         return 1;
     }
     llm_set_provider(provider_args.provider->sval[0]);
+    llm_proxy_init();
+    display_service_show_ready(wifi_manager_get_ip(), llm_get_provider(), llm_get_model());
     printf("Model provider set.\n");
     return 0;
 }
